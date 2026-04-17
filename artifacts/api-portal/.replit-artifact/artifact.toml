@@ -1,0 +1,23 @@
+kind = "web"
+  previewPath = "/portal"
+  title = "AI Monorepo Portal"
+  version = "1.0.0"
+  id = "artifacts/api-portal"
+  router = "path"
+
+  [[integratedSkills]]
+  name = "react-vite"
+  version = "1.0.0"
+
+  [[services]]
+  name = "web"
+  paths = [ "/portal" ]
+  localPort = 3000
+
+  [services.development]
+  run = "pnpm --filter @workspace/api-portal run dev"
+
+  [services.env]
+  PORT = "3000"
+  BASE_PATH = "/portal"
+  
