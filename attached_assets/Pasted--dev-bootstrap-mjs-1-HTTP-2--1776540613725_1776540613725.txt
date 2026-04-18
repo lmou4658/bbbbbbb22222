@@ -1,0 +1,188 @@
+/**
+ * dev-bootstrap.mjs
+ *
+ * 开发模式启动引导脚本：
+ *  1. 立即在目标端口启动一个轻量 HTTP 服务，返回"正在初始化"页面
+ *  2. 同步执行编译（仅当产物不存在时）
+ *  3. 编译完成后关闭临时服务，无缝切换到真正的应用进程
+ */
+
+import { createServer } from "http";
+import { existsSync } from "fs";
+import { execSync, spawn } from "child_process";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PORT = Number(process.env.PORT || "8080");
+
+const distEntry   = join(__dirname, "dist/index.mjs");
+const portalEntry = join(__dirname, "../api-portal/dist/public/index.html");
+
+const needsBuild       = !existsSync(distEntry);
+const needsPortalBuild = !existsSync(portalEntry);
+
+// ── 产物都存在 → 直接启动，跳过引导 ─────────────────────────────────────────
+if (!needsBuild && !needsPortalBuild) {
+  console.log("[bootstrap] 产物已存在，直接启动...");
+  launchRealServer();
+} else {
+  // ── 先起临时服务让 Replit 认为服务在线 ──────────────────────────────────
+  const tempServer = createServer(handleInit);
+
+  tempServer.listen(PORT, () => {
+    console.log(`[bootstrap] 初始化页面已就绪 (port ${PORT})，开始编译...`);
+    runBuilds(tempServer);
+  });
+}
+
+// ── 编译流程（异步子进程，不阻塞事件循环） ──────────────────────────────────
+function runBuilds(tempServer) {
+  const steps = [];
+
+  if (needsBuild) {
+    steps.push({
+      label: "后端 (api-server)",
+      cmd: "pnpm",
+      args: ["run", "build"],
+      env: {},
+    });
+  }
+
+  if (needsPortalBuild) {
+    steps.push({
+      label: "前端 (api-portal)",
+      cmd: "pnpm",
+      args: ["--filter", "@workspace/api-portal", "run", "build"],
+      env: { BASE_PATH: "/", PORT: "3000" },
+    });
+  }
+
+  function runNext(index) {
+    if (index >= steps.length) {
+      console.log("[bootstrap] 编译完成，切换到应用服务...");
+      tempServer.close(() => {
+        setTimeout(() => launchRealServer(), 150);
+      });
+      return;
+    }
+
+    const step = steps[index];
+    console.log(`[bootstrap] 编译 ${step.label}...`);
+
+    const child = spawn(step.cmd, step.args, {
+      stdio: "inherit",
+      cwd: __dirname,
+      env: { ...process.env, ...step.env },
+    });
+
+    child.on("exit", (code) => {
+      if (code !== 0) {
+        console.error(`[bootstrap] ${step.label} 编译失败 (exit ${code})`);
+        process.exit(1);
+      }
+      runNext(index + 1);
+    });
+  }
+
+  runNext(0);
+}
+
+// ── 启动真正的应用进程（转发所有信号） ──────────────────────────────────────
+function launchRealServer() {
+  const child = spawn(
+    process.execPath,
+    ["--enable-source-maps", join(__dirname, "dist/index.mjs")],
+    {
+      stdio: "inherit",
+      env: process.env,
+      cwd: __dirname,
+    }
+  );
+
+  for (const sig of ["SIGTERM", "SIGINT", "SIGHUP"]) {
+    process.on(sig, () => child.kill(sig));
+  }
+
+  child.on("exit", (code) => process.exit(code ?? 0));
+}
+
+// ── 临时 HTTP 处理函数 ────────────────────────────────────────────────────────
+function handleInit(req, res) {
+  if (req.url === "/api/healthz") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "initializing" }));
+    return;
+  }
+
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+  res.end(INIT_HTML);
+}
+
+// ── 初始化页面 HTML ───────────────────────────────────────────────────────────
+const INIT_HTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Monorepo Portal — 正在初始化</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f11;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .card {
+      text-align: center;
+      padding: 48px 56px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 16px;
+      max-width: 420px;
+      width: 90%;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 28px;
+      border: 3px solid #3f3f46;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 { font-size: 1.2rem; font-weight: 600; margin-bottom: 10px; }
+    p  { font-size: 0.875rem; color: #71717a; line-height: 1.7; }
+    .dot { animation: blink 1.4s infinite; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100% { opacity: 0; } 40% { opacity: 1; } }
+  </style>
+  <script>
+    (function poll() {
+      fetch("/api/healthz")
+        .then(r => r.json())
+        .then(d => {
+          if (d.status !== "initializing") location.reload();
+          else setTimeout(poll, 3000);
+        })
+        .catch(() => setTimeout(poll, 3000));
+    })();
+  </script>
+</head>
+<body>
+  <div class="card">
+    <div class="spinner"></div>
+    <h1>AI Monorepo Portal</h1>
+    <p>
+      首次启动正在编译应用<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span><br/>
+      完成后页面将自动跳转，无需手动刷新。
+    </p>
+  </div>
+</body>
+</html>`;

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && (test -f ./dist/index.mjs || pnpm run build) && (test -f ../api-portal/dist/public/index.html || pnpm run build:portal) && pnpm run start",
+    "dev": "export NODE_ENV=development && node dev-bootstrap.mjs",
     "build:portal": "BASE_PATH=/ PORT=3000 pnpm --filter @workspace/api-portal run build",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
