@@ -17,8 +17,8 @@ Sourced from: https://github.com/Direet1/smdjajd.git
 
 ## Artifacts
 
-- **api-server** (`artifacts/api-server/`) — Express backend, OpenAI-compatible proxy, serves at `/api`. Also serves the portal static files at `/`.
-- **api-portal** (`artifacts/api-portal/`) — React + Vite frontend portal. Built to `dist/public/` and served by api-server.
+- **api-server** (`artifacts/api-server/`) — The only registered runtime artifact. Express backend serving `/api`, `/`, and `/portal`. Owns the dev workflow which builds the portal then starts the server.
+- **api-portal** (`artifacts/api-portal/`) — React + Vite source package only (no longer a registered artifact / no separate workflow). Built to `dist/public/` by `api-server`'s `build:portal` step, then served as static files by `api-server`.
 
 ## Configuration
 
@@ -30,15 +30,17 @@ Sourced from: https://github.com/Direet1/smdjajd.git
 
 ## Development Workflow
 
-- **api-server** runs: `pnpm --filter @workspace/api-server run dev` (builds then starts on port 8080)
-- **api-portal** is built separately: `PORT=3000 BASE_PATH=/ pnpm --filter @workspace/api-portal run build`
-- The api-server serves portal static files from `artifacts/api-portal/dist/public/`
-- After portal changes, rebuild the portal and restart api-server
+- Single workflow: `pnpm --filter @workspace/api-server run dev`
+  - Step 1: `build:portal` (builds api-portal with `BASE_PATH=/`)
+  - Step 2: `build` (esbuild bundles api-server into `dist/`)
+  - Step 3: `start` (runs `dist/index.mjs` on port 8080)
+- api-server serves portal static files from `artifacts/api-portal/dist/public/`
+- After portal changes, just restart the api-server workflow — it rebuilds the portal automatically
 
 ## Key Commands
 
-- `pnpm --filter @workspace/api-server run dev` — run API server (serves portal + API)
-- `PORT=3000 BASE_PATH=/ pnpm --filter @workspace/api-portal run build` — rebuild portal static files
+- `pnpm --filter @workspace/api-server run dev` — full dev cycle: build portal + build server + start
+- `pnpm --filter @workspace/api-server run build:portal` — rebuild only the portal
 - `pnpm install` — install all workspace dependencies
 
 ## API Routes
