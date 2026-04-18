@@ -122,6 +122,34 @@ function stripClaudeSuffix(model: string): {
   return { baseModel: model, thinkingEnabled: false, thinkingVisible: false };
 }
 
+// Some Claude models (e.g. claude-opus-4-7+) reject thinking.type:"enabled" with
+// budget_tokens and instead require thinking.type:"adaptive" with output_config.effort.
+function requiresAdaptiveThinking(baseModel: string): boolean {
+  const m = /^claude-(?:opus|sonnet|haiku)-(\d+)-(\d+)/.exec(baseModel);
+  if (!m) return false;
+  const major = parseInt(m[1]!, 10);
+  const minor = parseInt(m[2]!, 10);
+  // opus-4-7 / sonnet-4-7 / haiku-4-7 and any newer 4.x or 5+ family use adaptive.
+  if (major > 4) return true;
+  if (major === 4 && minor >= 7) return true;
+  return false;
+}
+
+function buildClaudeThinkingParams(baseModel: string, maxTokens: number, visible: boolean): {
+  thinking: Record<string, unknown>;
+  output_config?: Record<string, unknown>;
+} {
+  if (requiresAdaptiveThinking(baseModel)) {
+    return {
+      thinking: { type: "adaptive" },
+      output_config: { effort: visible ? "high" : "medium" },
+    };
+  }
+  return {
+    thinking: { type: "enabled", budget_tokens: Math.min(10000, Math.floor(maxTokens * 0.6)) },
+  };
+}
+
 // ----------------------------------------------------------------------
 // Type aliases for incoming OpenAI-format request body
 // ----------------------------------------------------------------------
@@ -701,7 +729,11 @@ async function handleClaudeStream(
   }
   // budget_tokens must leave room for visible output.
   // Cap at 10 000 and at most 60 % of maxTokens so at least 40 % remains for output.
-  if (thinkingEnabled) params["thinking"] = { type: "enabled", budget_tokens: Math.min(10000, Math.floor(maxTokens * 0.6)) };
+  if (thinkingEnabled) {
+    const tp = buildClaudeThinkingParams(baseModel, maxTokens, thinkingVisible);
+    params["thinking"] = tp.thinking;
+    if (tp.output_config) params["output_config"] = tp.output_config;
+  }
   if (anthropicTools) params["tools"] = anthropicTools;
   if (anthropicToolChoice) params["tool_choice"] = anthropicToolChoice;
 
@@ -887,7 +919,11 @@ async function handleClaudeNonStream(
     else if (top_p !== undefined) params["top_p"] = top_p;
     if (stop) params["stop_sequences"] = Array.isArray(stop) ? stop : [stop];
   }
-  if (thinkingEnabled) params["thinking"] = { type: "enabled", budget_tokens: Math.min(10000, Math.floor(maxTokens * 0.6)) };
+  if (thinkingEnabled) {
+    const tp = buildClaudeThinkingParams(baseModel, maxTokens, thinkingVisible);
+    params["thinking"] = tp.thinking;
+    if (tp.output_config) params["output_config"] = tp.output_config;
+  }
   if (anthropicTools) params["tools"] = anthropicTools;
   if (anthropicToolChoice) params["tool_choice"] = anthropicToolChoice;
 
