@@ -25,3 +25,8 @@ expertMode = true
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
 
+[userenv]
+
+[userenv.shared]
+PROXY_API_KEY = "ab2080901"
+
