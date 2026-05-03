@@ -3,17 +3,19 @@ import PageLogs from "./components/PageLogs";
 import PageStats from "./components/PageStats";
 import { API_BASE, DISPLAY_BASE_URL, isDev as envIsDev } from "./lib/apiBase";
 
-const BG = "hsl(222,47%,11%)";
-const CARD = "hsl(222,47%,15%)";
-const CARD2 = "hsl(222,47%,18%)";
-const BORDER = "hsl(222,47%,22%)";
-const TEXT = "hsl(213,31%,91%)";
-const MUTED = "hsl(215,20%,55%)";
-const GREEN = "hsl(142,71%,45%)";
-const RED = "hsl(0,84%,60%)";
-const ACCENT = "hsl(217,91%,60%)";
-const YELLOW = "hsl(43,96%,56%)";
-const PURPLE = "hsl(262,83%,68%)";
+const BG = "#0a0f1e";
+const CARD = "rgba(255,255,255,0.04)";
+const CARD2 = "rgba(255,255,255,0.025)";
+const BORDER = "rgba(255,255,255,0.08)";
+const BORDER_ACCENT = "rgba(99,102,241,0.3)";
+const TEXT = "#e8edf5";
+const MUTED = "#64748b";
+const GREEN = "#22d3a5";
+const RED = "#f87171";
+const ACCENT = "#6366f1";
+const ACCENT2 = "#818cf8";
+const YELLOW = "#fbbf24";
+const PURPLE = "#a78bfa";
 
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -50,26 +52,26 @@ type UpdateState = "idle" | "checking" | "up-to-date" | "available" | "error";
 function ConfigBanner({ status, onGoToSetup }: { status: SetupStatus; onGoToSetup: () => void }) {
   const missing: string[] = [];
   if (!status.configured) missing.push("PROXY_API_KEY");
-  if (!status.integrations.anthropic) missing.push("Anthropic Integration");
-  if (!status.integrations.openai) missing.push("OpenAI Integration");
-  if (!status.integrations.gemini) missing.push("Gemini Integration");
-  if (!status.integrations.openrouter) missing.push("OpenRouter Integration");
+  if (!status.integrations.anthropic) missing.push("Anthropic");
+  if (!status.integrations.openai) missing.push("OpenAI");
+  if (!status.integrations.gemini) missing.push("Gemini");
+  if (!status.integrations.openrouter) missing.push("OpenRouter");
   if (missing.length === 0) return null;
 
   return (
     <div style={{
       position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999,
-      background: `linear-gradient(90deg, ${RED}ee, #b91c1c)`,
-      borderBottom: `2px solid ${RED}`,
+      background: `linear-gradient(90deg, rgba(239,68,68,0.95), rgba(185,28,28,0.95))`,
+      backdropFilter: "blur(12px)",
+      borderBottom: `1px solid rgba(239,68,68,0.4)`,
       display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "0 16px", gap: 12, minHeight: 48,
-      boxShadow: `0 2px 16px ${RED}60`,
+      padding: "0 20px", gap: 12, minHeight: 48,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-        <span style={{ fontSize: 18, flexShrink: 0 }}>⚠</span>
-        <div style={{ fontSize: 12.5, color: "#fff", fontWeight: 600, lineHeight: 1.4 }}>
-          配置未完成，代理暂无法使用
-          <span style={{ fontWeight: 400, marginLeft: 8, opacity: 0.85 }}>
+        <span style={{ fontSize: 16, flexShrink: 0 }}>⚠</span>
+        <div style={{ fontSize: 12.5, color: "#fff", fontWeight: 600 }}>
+          配置未完成
+          <span style={{ fontWeight: 400, marginLeft: 8, opacity: 0.8 }}>
             缺少：{missing.join(" · ")}
           </span>
         </div>
@@ -77,22 +79,17 @@ function ConfigBanner({ status, onGoToSetup }: { status: SetupStatus; onGoToSetu
       <button
         onClick={onGoToSetup}
         style={{
-          padding: "6px 16px", borderRadius: 6, border: "2px solid rgba(255,255,255,0.9)",
-          background: "rgba(255,255,255,0.15)", color: "#fff",
-          fontSize: 12.5, fontWeight: 700, cursor: "pointer", flexShrink: 0,
-          backdropFilter: "blur(4px)", transition: "background 0.15s",
-          letterSpacing: "0.02em",
+          padding: "5px 16px", borderRadius: 6, border: "1.5px solid rgba(255,255,255,0.7)",
+          background: "rgba(255,255,255,0.12)", color: "#fff",
+          fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0,
+          backdropFilter: "blur(4px)", letterSpacing: "0.03em",
         }}
-        onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.28)")}
-        onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.15)")}
       >
         立即配置 →
       </button>
     </div>
   );
 }
-
-// ── Shared helpers ─────────────────────────────────────────────────────
 
 // ── Model Groups Panel ─────────────────────────────────────────────────────
 
@@ -104,20 +101,32 @@ function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: boolean
     <div
       onClick={() => !disabled && onChange(!on)}
       style={{
-        width: 36, height: 20, borderRadius: 10,
-        background: on && !disabled ? GREEN : BORDER,
+        width: 38, height: 22, borderRadius: 11,
+        background: on && !disabled
+          ? `linear-gradient(135deg, ${GREEN}, #10b981)`
+          : "rgba(255,255,255,0.1)",
         position: "relative", cursor: disabled ? "not-allowed" : "pointer",
-        transition: "background 0.2s", flexShrink: 0, opacity: disabled ? 0.5 : 1,
+        transition: "background 0.25s", flexShrink: 0, opacity: disabled ? 0.4 : 1,
+        boxShadow: on && !disabled ? `0 0 12px ${GREEN}40` : "none",
       }}
     >
       <div style={{
-        position: "absolute", top: 2, left: on ? 18 : 2,
-        width: 16, height: 16, borderRadius: "50%", background: "#fff",
-        transition: "left 0.2s",
+        position: "absolute", top: 3, left: on ? 19 : 3,
+        width: 16, height: 16, borderRadius: "50%",
+        background: "#fff",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
+        transition: "left 0.22s cubic-bezier(.4,0,.2,1)",
       }} />
     </div>
   );
 }
+
+const PROVIDER_ICONS: Record<string, string> = {
+  "Anthropic": "🟠",
+  "OpenAI": "🔵",
+  "Google Gemini": "🟢",
+  "OpenRouter": "🟣",
+};
 
 function ModelGroupsPanel() {
   const [groups, setGroups] = useState<ModelGroupConfig[] | null>(null);
@@ -178,7 +187,7 @@ function ModelGroupsPanel() {
 
   if (!groups) {
     return (
-      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "20px 18px", color: MUTED, fontSize: 12 }}>
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "20px 18px", color: MUTED, fontSize: 12 }}>
         正在加载模型组配置…
       </div>
     );
@@ -187,12 +196,23 @@ function ModelGroupsPanel() {
   const saveColor = saveResult === "ok" ? GREEN : saveResult === "err" ? RED : ACCENT;
 
   return (
-    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, overflow: "hidden" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, padding: "14px 18px", borderBottom: `1px solid ${BORDER}` }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>模型组管理</span>
+    <div style={{
+      background: CARD, border: `1px solid ${BORDER}`,
+      borderRadius: 14, overflow: "hidden",
+      backdropFilter: "blur(8px)",
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexWrap: "wrap", gap: 8, padding: "14px 18px",
+        borderBottom: `1px solid ${BORDER}`,
+        background: "rgba(255,255,255,0.02)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 14 }}>⚡</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, letterSpacing: "-0.01em" }}>模型组管理</span>
+        </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          {!dirty && <span style={{ fontSize: 11, color: MUTED }}>点击开关修改，再保存</span>}
+          {!dirty && <span style={{ fontSize: 11, color: MUTED }}>拨动开关修改，再保存生效</span>}
           {dirty && showKey && (
             <input
               type="password"
@@ -200,8 +220,9 @@ function ModelGroupsPanel() {
               onChange={e => setApiKey(e.target.value)}
               placeholder="PROXY_API_KEY"
               style={{
-                padding: "5px 10px", borderRadius: 6, border: `1px solid ${BORDER}`,
-                background: BG, color: TEXT, fontSize: 12, fontFamily: "monospace", outline: "none", width: 160,
+                padding: "5px 10px", borderRadius: 7, border: `1px solid ${BORDER_ACCENT}`,
+                background: "rgba(0,0,0,0.3)", color: TEXT, fontSize: 12,
+                fontFamily: "monospace", outline: "none", width: 160,
               }}
               onKeyDown={e => e.key === "Enter" && save()}
             />
@@ -211,9 +232,15 @@ function ModelGroupsPanel() {
               onClick={save}
               disabled={saving}
               style={{
-                padding: "5px 16px", borderRadius: 6, background: saveColor,
+                padding: "5px 16px", borderRadius: 7,
+                background: saveResult === "ok"
+                  ? `linear-gradient(135deg, ${GREEN}, #10b981)`
+                  : saveResult === "err"
+                  ? `linear-gradient(135deg, ${RED}, #dc2626)`
+                  : `linear-gradient(135deg, ${ACCENT}, ${PURPLE})`,
                 border: "none", color: "#fff", fontSize: 12, fontWeight: 600,
-                cursor: saving ? "not-allowed" : "pointer", transition: "background 0.2s",
+                cursor: saving ? "not-allowed" : "pointer",
+                boxShadow: saveResult === "ok" ? `0 0 12px ${GREEN}40` : `0 0 12px ${ACCENT}40`,
               }}
             >
               {saving ? "保存中…" : saveResult === "ok" ? "✓ 已保存" : saveResult === "err" ? "✗ 失败" : "保存更改"}
@@ -222,51 +249,82 @@ function ModelGroupsPanel() {
         </div>
       </div>
 
-      {/* Group rows */}
       {groups.map(group => {
         const isOpen = !!expanded[group.id];
         const enabledCount = group.models.filter(m => m.enabled).length;
+        const icon = PROVIDER_ICONS[group.name] ?? "◆";
         return (
           <div key={group.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
-            {/* Group header row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 18px", background: group.enabled ? "transparent" : `${RED}08` }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "11px 18px",
+              background: group.enabled ? "transparent" : "rgba(239,68,68,0.04)",
+              transition: "background 0.2s",
+            }}>
               <Toggle on={group.enabled} onChange={v => toggleGroup(group.id, v)} />
               <button
                 onClick={() => setExpanded(e => ({ ...e, [group.id]: !e[group.id] }))}
                 style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, padding: 0 }}
               >
+                <span style={{ fontSize: 14 }}>{icon}</span>
                 <span style={{ fontSize: 13, fontWeight: 600, color: group.enabled ? TEXT : MUTED }}>{group.name}</span>
-                <span style={{ fontSize: 11, color: MUTED }}>
-                  {group.enabled ? `${enabledCount} / ${group.models.length} 启用` : "整组停用"}
+                <span style={{
+                  fontSize: 10.5, padding: "2px 8px", borderRadius: 20,
+                  background: group.enabled ? "rgba(34,211,165,0.1)" : "rgba(255,255,255,0.05)",
+                  color: group.enabled ? GREEN : MUTED,
+                  border: `1px solid ${group.enabled ? "rgba(34,211,165,0.25)" : BORDER}`,
+                }}>
+                  {group.enabled ? `${enabledCount} / ${group.models.length}` : "已停用"}
                 </span>
-                <span style={{ marginLeft: "auto", color: MUTED, fontSize: 11, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▼</span>
+                <span style={{
+                  marginLeft: "auto", color: MUTED, fontSize: 10,
+                  transform: isOpen ? "rotate(180deg)" : "none",
+                  transition: "transform 0.2s",
+                }}>▼</span>
               </button>
-              {/* Batch: enable all / disable all */}
               {isOpen && (
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => toggleAllInGroup(group.id, true)} style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${GREEN}50`, background: `${GREEN}12`, color: GREEN, fontSize: 11, cursor: "pointer" }}>全开</button>
-                  <button onClick={() => toggleAllInGroup(group.id, false)} style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${RED}50`, background: `${RED}10`, color: RED, fontSize: 11, cursor: "pointer" }}>全关</button>
+                  <button onClick={() => toggleAllInGroup(group.id, true)} style={{
+                    padding: "3px 10px", borderRadius: 6,
+                    border: `1px solid rgba(34,211,165,0.3)`,
+                    background: "rgba(34,211,165,0.08)", color: GREEN,
+                    fontSize: 11, cursor: "pointer", fontWeight: 600,
+                  }}>全开</button>
+                  <button onClick={() => toggleAllInGroup(group.id, false)} style={{
+                    padding: "3px 10px", borderRadius: 6,
+                    border: `1px solid rgba(248,113,113,0.3)`,
+                    background: "rgba(248,113,113,0.08)", color: RED,
+                    fontSize: 11, cursor: "pointer", fontWeight: 600,
+                  }}>全关</button>
                 </div>
               )}
             </div>
 
-            {/* Model list */}
             {isOpen && (
-              <div style={{ background: BG, padding: "4px 18px 10px" }}>
+              <div style={{ background: "rgba(0,0,0,0.2)", padding: "6px 18px 12px" }}>
                 {group.models.map(model => (
                   <div key={model.id} style={{
                     display: "flex", alignItems: "center", gap: 10,
-                    padding: "5px 0", borderBottom: `1px solid ${BORDER}28`,
-                    opacity: group.enabled ? 1 : 0.4,
+                    padding: "5px 0", borderBottom: `1px solid rgba(255,255,255,0.03)`,
+                    opacity: group.enabled ? 1 : 0.35,
                   }}>
                     <Toggle
                       on={model.enabled}
                       onChange={v => { if (group.enabled) toggleModel(group.id, model.id, v); }}
                       disabled={!group.enabled}
                     />
-                    <span style={{ fontFamily: "monospace", fontSize: 11, color: model.enabled && group.enabled ? TEXT : MUTED }}>
+                    <span style={{
+                      fontFamily: "monospace", fontSize: 11.5,
+                      color: model.enabled && group.enabled ? ACCENT2 : MUTED,
+                    }}>
                       {model.id}
                     </span>
+                    {model.enabled && group.enabled && (
+                      <span style={{
+                        marginLeft: "auto", width: 6, height: 6, borderRadius: "50%",
+                        background: GREEN, boxShadow: `0 0 6px ${GREEN}`,
+                      }} />
+                    )}
                   </div>
                 ))}
               </div>
@@ -286,7 +344,8 @@ function CopyBox({ value, label, inline }: { value: string; label?: string; inli
     return (
       <button onClick={doCopy} style={{
         padding: "3px 10px", borderRadius: 5, border: `1px solid ${BORDER}`,
-        background: copied ? `${GREEN}20` : "transparent", color: copied ? GREEN : MUTED,
+        background: copied ? `rgba(34,211,165,0.1)` : "transparent",
+        color: copied ? GREEN : MUTED,
         fontSize: 11, cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
       }}>{copied ? "已复制" : "复制代码"}</button>
     );
@@ -295,13 +354,18 @@ function CopyBox({ value, label, inline }: { value: string; label?: string; inli
   return (
     <div style={{ marginTop: 10 }}>
       {label && <div style={{ fontSize: 11, color: MUTED, marginBottom: 5, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</div>}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "10px 14px" }}>
-        <code style={{ flex: 1, fontFamily: "monospace", fontSize: 12, color: ACCENT, lineHeight: 1.7, wordBreak: "break-all" }}>{value}</code>
+      <div style={{
+        display: "flex", alignItems: "flex-start", gap: 8,
+        background: "rgba(0,0,0,0.3)", border: `1px solid ${BORDER}`,
+        borderRadius: 9, padding: "10px 14px",
+      }}>
+        <code style={{ flex: 1, fontFamily: "monospace", fontSize: 12, color: ACCENT2, lineHeight: 1.7, wordBreak: "break-all" }}>{value}</code>
         <button onClick={doCopy} style={{
           padding: "4px 12px", borderRadius: 6, border: `1px solid ${BORDER}`,
-          background: copied ? `${GREEN}20` : "transparent", color: copied ? GREEN : MUTED,
+          background: copied ? "rgba(34,211,165,0.12)" : "rgba(255,255,255,0.05)",
+          color: copied ? GREEN : MUTED,
           fontSize: 12, cursor: "pointer", flexShrink: 0, transition: "all 0.15s", whiteSpace: "nowrap",
-        }}>{copied ? "已复制" : "复制"}</button>
+        }}>{copied ? "✓ 已复制" : "复制"}</button>
       </div>
     </div>
   );
@@ -309,13 +373,20 @@ function CopyBox({ value, label, inline }: { value: string; label?: string; inli
 
 function StatusRow({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: `1px solid ${BORDER}` }}>
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
+      borderBottom: `1px solid ${BORDER}`,
+    }}>
       <span style={{
-        width: 18, height: 18, borderRadius: "50%", fontSize: 10, fontWeight: 700,
+        width: 20, height: 20, borderRadius: "50%", fontSize: 10, fontWeight: 700,
         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-        background: ok ? `${GREEN}20` : `${RED}18`, color: ok ? GREEN : RED, border: `1px solid ${ok ? GREEN : RED}40`,
+        background: ok ? "rgba(34,211,165,0.12)" : "rgba(248,113,113,0.1)",
+        color: ok ? GREEN : RED,
+        border: `1px solid ${ok ? "rgba(34,211,165,0.3)" : "rgba(248,113,113,0.3)"}`,
+        boxShadow: ok ? `0 0 8px rgba(34,211,165,0.2)` : "none",
       }}>{ok ? "✓" : "✗"}</span>
       <span style={{ fontSize: 13, color: ok ? TEXT : MUTED }}>{label}</span>
+      {ok && <span style={{ marginLeft: "auto", fontSize: 10, color: GREEN, fontWeight: 600 }}>已就绪</span>}
     </div>
   );
 }
@@ -365,7 +436,6 @@ function UpdatePanel() {
 
   const current = versionData?.current;
   const remote = versionData?.remote;
-
   const agentPrompt = remote?.version ? buildAgentPrompt(remote.version) : "";
 
   const copyPrompt = async () => {
@@ -377,128 +447,140 @@ function UpdatePanel() {
   };
 
   return (
-    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, overflow: "hidden" }}>
-      {/* Header row */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${BORDER}` }}>
+    <div style={{
+      background: CARD, border: `1px solid ${BORDER}`,
+      borderRadius: 14, overflow: "hidden", backdropFilter: "blur(8px)",
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "14px 18px", borderBottom: `1px solid ${BORDER}`,
+        background: "rgba(255,255,255,0.02)",
+      }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>版本 & 更新</span>
+          <span style={{ fontSize: 14 }}>🔄</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, letterSpacing: "-0.01em" }}>版本 & 更新</span>
           {current && (
-            <span style={{ fontFamily: "monospace", fontSize: 11, color: PURPLE, background: `${PURPLE}18`, border: `1px solid ${PURPLE}30`, borderRadius: 12, padding: "2px 8px" }}>
+            <span style={{
+              fontFamily: "monospace", fontSize: 11, color: PURPLE,
+              background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.25)",
+              borderRadius: 20, padding: "2px 9px", fontWeight: 600,
+            }}>
               v{current.version}
             </span>
           )}
           {state === "available" && remote && (
-            <span style={{ fontFamily: "monospace", fontSize: 11, color: GREEN, background: `${GREEN}15`, border: `1px solid ${GREEN}30`, borderRadius: 12, padding: "2px 8px" }}>
+            <span style={{
+              fontFamily: "monospace", fontSize: 11, color: GREEN,
+              background: "rgba(34,211,165,0.12)", border: "1px solid rgba(34,211,165,0.3)",
+              borderRadius: 20, padding: "2px 9px", fontWeight: 600,
+            }}>
               → v{remote.version} 可用
             </span>
           )}
-          {state === "up-to-date" && <span style={{ fontSize: 11, color: GREEN }}>✓ 已是最新</span>}
-          {state === "error"      && <span style={{ fontSize: 11, color: RED   }}>✗ 检测失败</span>}
+          {state === "up-to-date" && <span style={{ fontSize: 11, color: GREEN, fontWeight: 600 }}>✓ 已是最新</span>}
+          {state === "error" && <span style={{ fontSize: 11, color: RED }}>✗ 检测失败</span>}
         </div>
         <button
           onClick={checkUpdate}
           disabled={state === "checking"}
           style={{
-            padding: "5px 14px", borderRadius: 6, border: `1px solid ${BORDER}`,
-            background: "transparent", color: state === "checking" ? MUTED : ACCENT,
-            fontSize: 12, cursor: state === "checking" ? "not-allowed" : "pointer",
+            padding: "5px 14px", borderRadius: 7,
+            border: `1px solid ${BORDER_ACCENT}`,
+            background: "rgba(99,102,241,0.1)",
+            color: state === "checking" ? MUTED : ACCENT2,
+            fontSize: 12, fontWeight: 500,
+            cursor: state === "checking" ? "not-allowed" : "pointer",
           }}
         >
           {state === "checking" ? "检测中…" : "检测更新"}
         </button>
       </div>
 
-      {/* Remote changelog */}
       {state === "available" && remote?.changelog && (
-        <div style={{ padding: "12px 18px", borderBottom: `1px solid ${BORDER}`, background: `${GREEN}06` }}>
+        <div style={{ padding: "12px 18px", borderBottom: `1px solid ${BORDER}`, background: "rgba(34,211,165,0.03)" }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: GREEN, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
             v{remote.version} 更新内容
           </div>
           {remote.changelog.map((item, i) => (
-            <div key={i} style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, paddingLeft: 8, borderLeft: `2px solid ${GREEN}40`, marginBottom: 4 }}>
+            <div key={i} style={{
+              fontSize: 12, color: MUTED, lineHeight: 1.6,
+              paddingLeft: 10, borderLeft: `2px solid rgba(34,211,165,0.4)`, marginBottom: 4,
+            }}>
               {item}
             </div>
           ))}
         </div>
       )}
 
-      {/* Current changelog (idle / up-to-date) */}
       {(state === "idle" || state === "up-to-date") && current?.changelog && (
         <div style={{ padding: "12px 18px", borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>当前版本内容</div>
           {current.changelog.map((item, i) => (
-            <div key={i} style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, paddingLeft: 8, borderLeft: `2px solid ${BORDER}`, marginBottom: 4 }}>
+            <div key={i} style={{
+              fontSize: 12, color: MUTED, lineHeight: 1.6,
+              paddingLeft: 10, borderLeft: `2px solid ${BORDER}`, marginBottom: 4,
+            }}>
               {item}
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Update available: Agent prompt box ── */}
       {state === "available" && remote && (
-        <div style={{ padding: "16px 18px", borderTop: `1px solid ${BORDER}` }}>
-          {/* Explanation */}
+        <div style={{ padding: "16px 18px" }}>
           <div style={{
             fontSize: 12, color: MUTED, lineHeight: 1.65, marginBottom: 14,
-            background: `${YELLOW}0c`, border: `1px solid ${YELLOW}28`,
-            borderRadius: 8, padding: "10px 14px",
+            background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)",
+            borderRadius: 9, padding: "10px 14px",
           }}>
             <span style={{ color: YELLOW, fontWeight: 700 }}>为什么需要这一步？</span>
-            {"  "}服务器是编译型 Node.js 程序，新代码必须重新编译并重启才能生效，无法热更新。
-            将下方提示词复制给 <strong style={{ color: TEXT }}>Replit Agent</strong> 即可完成整个更新流程。
+            {"  "}服务器是编译型 Node.js 程序，新代码必须重新编译并重启才能生效。
+            将下方提示词复制给 <strong style={{ color: TEXT }}>Replit Agent</strong> 即可完成更新。
           </div>
-
-          {/* Prompt preview */}
           <div style={{
-            background: BG, border: `1px solid ${BORDER}`, borderRadius: 8,
-            padding: "12px 14px", fontFamily: "monospace", fontSize: 11,
-            color: MUTED, lineHeight: 1.8, whiteSpace: "pre-wrap", wordBreak: "break-all",
-            maxHeight: 220, overflowY: "auto", marginBottom: 10,
+            background: "rgba(0,0,0,0.3)", border: `1px solid ${BORDER}`,
+            borderRadius: 9, padding: "12px 14px",
+            fontFamily: "monospace", fontSize: 11, color: MUTED,
+            lineHeight: 1.8, whiteSpace: "pre-wrap", wordBreak: "break-all",
+            maxHeight: 200, overflowY: "auto", marginBottom: 12,
           }}>
             {agentPrompt}
           </div>
-
-          {/* GitHub link + copy button */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                flex: 1, padding: "9px 0", borderRadius: 7,
-                border: `1px solid ${BORDER}`, background: "transparent",
-                color: ACCENT, fontSize: 12, fontWeight: 600,
-                textAlign: "center", textDecoration: "none",
-                display: "block",
-              }}
-            >
-              ↗ 查看 GitHub 源码
+          <div style={{ display: "flex", gap: 8 }}>
+            <a href={GITHUB_URL} target="_blank" rel="noreferrer" style={{
+              flex: 1, padding: "9px 0", borderRadius: 8,
+              border: `1px solid ${BORDER_ACCENT}`,
+              background: "rgba(99,102,241,0.08)",
+              color: ACCENT2, fontSize: 12, fontWeight: 600,
+              textAlign: "center", textDecoration: "none", display: "block",
+            }}>
+              ↗ GitHub 源码
             </a>
-            <button
-              onClick={copyPrompt}
-              style={{
-                flex: 2, padding: "9px 0", borderRadius: 7,
-                background: copied ? GREEN : ACCENT,
-                border: "none", color: "#fff",
-                fontSize: 13, fontWeight: 700, cursor: "pointer",
-                transition: "background 0.2s",
-              }}
-            >
+            <button onClick={copyPrompt} style={{
+              flex: 2, padding: "9px 0", borderRadius: 8,
+              background: copied
+                ? `linear-gradient(135deg, ${GREEN}, #10b981)`
+                : `linear-gradient(135deg, ${ACCENT}, ${PURPLE})`,
+              border: "none", color: "#fff",
+              fontSize: 13, fontWeight: 700, cursor: "pointer",
+              boxShadow: `0 0 20px ${copied ? GREEN : ACCENT}40`,
+              transition: "all 0.2s",
+            }}>
               {copied ? "✓ 已复制！粘贴给 Agent 即可" : "复制更新提示词"}
             </button>
           </div>
         </div>
       )}
 
-      {/* Version history */}
       {current?.history && current.history.length > 0 && (
         <div style={{ padding: "14px 18px", borderTop: `1px solid ${BORDER}` }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>版本历史 / Release History</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>版本历史</div>
           {current.history.map((ver) => (
-            <details key={ver.version} style={{ marginBottom: 8 }}>
+            <details key={ver.version} style={{ marginBottom: 6 }}>
               <summary style={{
-                cursor: "pointer", fontSize: 12, color: MUTED, fontFamily: "monospace",
-                listStyle: "none", display: "flex", alignItems: "center", gap: 8,
+                cursor: "pointer", fontSize: 12, color: MUTED,
+                fontFamily: "monospace", listStyle: "none",
+                display: "flex", alignItems: "center", gap: 8,
                 padding: "4px 0", userSelect: "none",
               }}>
                 <span style={{ color: TEXT, fontWeight: 600 }}>v{ver.version}</span>
@@ -528,7 +610,6 @@ const LS_PROXY_KEY = "aim_proxy_key";
 
 type MainTab = "home" | "logs" | "stats";
 
-// Integration setup code — executed via Agent's code_execution tool
 const INTEGRATION_CODE = `const integrations = [
   { label: "Anthropic",  providerSlug: "anthropic",  providerApiKeyEnvVarName: "AI_INTEGRATIONS_ANTHROPIC_API_KEY",  providerUrlEnvVarName: "AI_INTEGRATIONS_ANTHROPIC_BASE_URL" },
   { label: "OpenAI",     providerSlug: "openai",     providerApiKeyEnvVarName: "AI_INTEGRATIONS_OPENAI_API_KEY",     providerUrlEnvVarName: "AI_INTEGRATIONS_OPENAI_BASE_URL" },
@@ -600,7 +681,6 @@ function SetupWizard({ status, onRecheck, onDismiss }: {
   const currentStep = phaseIdx;
 
   const unifiedPrompt = buildUnifiedPrompt(needsKey, keyInput, needsIntegrations);
-
   const goNext = () => setPhaseIdx(i => Math.min(i + 1, phases.length - 1));
 
   const handleRecheck = async () => {
@@ -612,48 +692,72 @@ function SetupWizard({ status, onRecheck, onDismiss }: {
 
   const PrimaryBtn = ({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) => (
     <button onClick={onClick} disabled={disabled} style={{
-      width: "100%", padding: "11px 0", borderRadius: 8,
-      background: disabled ? `${ACCENT}30` : ACCENT, border: "none", color: "#fff",
-      fontSize: 14, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer",
-      transition: "background 0.15s", marginTop: 4,
+      width: "100%", padding: "12px 0", borderRadius: 10,
+      background: disabled
+        ? "rgba(99,102,241,0.2)"
+        : `linear-gradient(135deg, ${ACCENT}, ${PURPLE})`,
+      border: "none", color: "#fff",
+      fontSize: 14, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer",
+      boxShadow: disabled ? "none" : `0 0 20px rgba(99,102,241,0.4)`,
+      transition: "all 0.2s", marginTop: 4,
     }}>{children}</button>
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Inter', system-ui, sans-serif", display: "flex", justifyContent: "center", padding: "48px 16px" }}>
+    <div style={{
+      minHeight: "100vh", background: BG, color: TEXT,
+      fontFamily: "'Inter', system-ui, sans-serif",
+      display: "flex", justifyContent: "center", padding: "48px 16px",
+      backgroundImage: `radial-gradient(ellipse 80% 80% at 50% -20%, rgba(99,102,241,0.15), transparent)`,
+    }}>
       <div style={{ width: "100%", maxWidth: 500 }}>
-
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }}>AI Monorepo</h1>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 36 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 9,
+              background: `linear-gradient(135deg, ${ACCENT}, ${PURPLE})`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 16, boxShadow: `0 0 16px rgba(99,102,241,0.5)`,
+            }}>⚡</div>
+            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: TEXT }}>AI Monorepo</h1>
+          </div>
           {phaseIdx === 0 ? (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, background: `${YELLOW}18`, color: YELLOW, border: `1px solid ${YELLOW}40` }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: YELLOW }} /> 需要配置
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+              background: "rgba(251,191,36,0.1)", color: YELLOW,
+              border: `1px solid rgba(251,191,36,0.3)`,
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: YELLOW }} /> 需要配置
             </span>
           ) : (
             <span style={{ fontSize: 12, color: MUTED }}>第 {currentStep} / {totalSteps} 步</span>
           )}
         </div>
 
-        {/* Step dots (visible on action steps) */}
         {phaseIdx > 0 && (
-          <div style={{ display: "flex", gap: 6, marginBottom: 24, justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: 6, marginBottom: 28, justifyContent: "center" }}>
             {phases.slice(1).map((_, i) => (
               <div key={i} style={{
-                width: i + 1 === currentStep ? 20 : 7, height: 7, borderRadius: 4,
-                background: i + 1 <= currentStep ? ACCENT : BORDER,
-                transition: "all 0.25s",
+                height: 4, borderRadius: 2,
+                width: i + 1 === currentStep ? 28 : 16,
+                background: i + 1 <= currentStep
+                  ? `linear-gradient(90deg, ${ACCENT}, ${PURPLE})`
+                  : BORDER,
+                transition: "all 0.3s",
               }} />
             ))}
           </div>
         )}
 
-        {/* Phase card */}
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "24px", marginBottom: 16 }}>
-
-          {/* ── OVERVIEW ── */}
+        <div style={{
+          background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}`,
+          borderRadius: 16, padding: "24px", marginBottom: 16,
+          backdropFilter: "blur(12px)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        }}>
           {phase === "overview" && (<>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>初次使用，需要简单配置</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: TEXT }}>初次使用，需要简单配置</div>
             <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 20 }}>
               以下是当前配置状态。向导会逐步引导你完成，<strong style={{ color: TEXT }}>全程只需复制一段提示词发给 AI 助手即可</strong>。
             </div>
@@ -664,12 +768,11 @@ function SetupWizard({ status, onRecheck, onDismiss }: {
             <StatusRow ok={status.integrations.openrouter} label="OpenRouter Integration — Llama / Grok / DeepSeek 等" />
           </>)}
 
-          {/* ── SET KEY ── */}
           {phase === "set-key" && (<>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>设置你的访问密钥</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: TEXT }}>设置你的访问密钥</div>
             <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 18 }}>
-              <code style={{ background: `${ACCENT}18`, padding: "1px 5px", borderRadius: 4, fontSize: 12, color: ACCENT }}>PROXY_API_KEY</code>
-              {" "}是你自己设定的代理密钥，客户端用它来鉴权。值可以是任意字符串，<strong style={{ color: TEXT }}>与任何第三方服务无关</strong>。
+              <code style={{ background: "rgba(99,102,241,0.15)", padding: "1px 6px", borderRadius: 4, fontSize: 12, color: ACCENT2 }}>PROXY_API_KEY</code>
+              {" "}是你自己设定的代理密钥，客户端用它鉴权。值可以是任意字符串，<strong style={{ color: TEXT }}>与任何第三方服务无关</strong>。
             </div>
             <input
               type="text"
@@ -680,9 +783,9 @@ function SetupWizard({ status, onRecheck, onDismiss }: {
               onKeyDown={e => { if (e.key === "Enter" && keyInput.trim()) goNext(); }}
               style={{
                 width: "100%", boxSizing: "border-box",
-                padding: "10px 13px", borderRadius: 8,
-                border: `1.5px solid ${keyInput.trim() ? ACCENT : BORDER}`,
-                background: BG, color: TEXT,
+                padding: "11px 14px", borderRadius: 9,
+                border: `1.5px solid ${keyInput.trim() ? BORDER_ACCENT : BORDER}`,
+                background: "rgba(0,0,0,0.3)", color: TEXT,
                 fontSize: 14, fontFamily: "monospace",
                 outline: "none", transition: "border-color 0.15s",
               }}
@@ -692,46 +795,33 @@ function SetupWizard({ status, onRecheck, onDismiss }: {
             )}
           </>)}
 
-          {/* ── COPY PROMPT ── */}
           {phase === "copy-prompt" && (<>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>将提示词发给 Replit Assistant</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: TEXT }}>将提示词发给 Replit Assistant</div>
             <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 18 }}>
               点击复制，然后打开 <strong style={{ color: TEXT }}>Replit Assistant（右下角 AI 图标）</strong>，把内容粘贴发送。
-              助手会自动完成{needsKey ? "密钥设置、Integration 配置" : "Integration 配置"}和服务器重启，无需你做任何其他操作。
+              助手会自动完成{needsKey ? "密钥设置、Integration 配置" : "Integration 配置"}和服务器重启。
             </div>
             <CopyBox value={unifiedPrompt} label="点击复制提示词" />
           </>)}
 
-          {/* ── VERIFY ── */}
           {phase === "verify" && (<>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>等待助手完成后验证</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: TEXT }}>等待助手完成后验证</div>
             <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, marginBottom: 4 }}>
               助手通常需要 1–2 分钟完成配置和重启。完成后，点击下方按钮检测是否生效。
             </div>
-            <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6 }}>
-              检测通过后将自动跳转到主页面，无需手动刷新。
-            </div>
+            <div style={{ fontSize: 12, color: MUTED }}>检测通过后将自动跳转到主页面。</div>
           </>)}
-
         </div>
 
-        {/* Action buttons */}
-        {phase === "overview" && (
-          <PrimaryBtn onClick={goNext}>开始配置 →</PrimaryBtn>
-        )}
-        {phase === "set-key" && (
-          <PrimaryBtn onClick={goNext} disabled={!keyInput.trim()}>下一步 →</PrimaryBtn>
-        )}
-        {phase === "copy-prompt" && (
-          <PrimaryBtn onClick={goNext}>已发送给助手，下一步 →</PrimaryBtn>
-        )}
+        {phase === "overview" && <PrimaryBtn onClick={goNext}>开始配置 →</PrimaryBtn>}
+        {phase === "set-key" && <PrimaryBtn onClick={goNext} disabled={!keyInput.trim()}>下一步 →</PrimaryBtn>}
+        {phase === "copy-prompt" && <PrimaryBtn onClick={goNext}>已发送给助手，下一步 →</PrimaryBtn>}
         {phase === "verify" && (
           <PrimaryBtn onClick={handleRecheck} disabled={checking}>
             {checking ? "检测中…" : "✓  重新检测配置"}
           </PrimaryBtn>
         )}
 
-        {/* Back link (on non-overview steps) */}
         {phaseIdx > 0 && (
           <div style={{ textAlign: "center", marginTop: 14 }}>
             <button onClick={() => setPhaseIdx(i => Math.max(i - 1, 0))} style={{
@@ -741,7 +831,6 @@ function SetupWizard({ status, onRecheck, onDismiss }: {
           </div>
         )}
 
-        {/* Skip link (on overview only) */}
         {phase === "overview" && onDismiss && (
           <div style={{ marginTop: 20, textAlign: "center" }}>
             <button onClick={onDismiss} style={{
@@ -753,7 +842,6 @@ function SetupWizard({ status, onRecheck, onDismiss }: {
             </button>
           </div>
         )}
-
       </div>
     </div>
   );
@@ -782,130 +870,223 @@ function MainPage({ status, onGoToSetup }: { status: SetupStatus; onGoToSetup?: 
   }, [checkHealth]);
 
   const statusColor = health === "online" ? GREEN : health === "offline" ? RED : MUTED;
-  const statusText = health === "online" ? "Online" : health === "offline" ? "Offline" : "Checking…";
+  const statusLabel = health === "online" ? "Online" : health === "offline" ? "Offline" : "Checking…";
 
   const incomplete = onGoToSetup && (!status.configured || !status.integrations.allReady);
 
-  const TABS: { id: MainTab; label: string }[] = [
-    { id: "home", label: "首页" },
-    { id: "stats", label: "用量" },
-    { id: "logs", label: "日志" },
+  const TABS: { id: MainTab; label: string; icon: string }[] = [
+    { id: "home", label: "首页", icon: "⌂" },
+    { id: "stats", label: "用量", icon: "◎" },
+    { id: "logs", label: "日志", icon: "≡" },
   ];
 
   return (
     <>
       {incomplete && onGoToSetup && <ConfigBanner status={status} onGoToSetup={onGoToSetup} />}
-      <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Inter', system-ui, sans-serif", display: "flex", justifyContent: "center", padding: `${incomplete ? 88 : 40}px 16px 40px` }}>
-      <div style={{ width: "100%", maxWidth: 680 }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>AI Monorepo</h1>
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600,
-            background: `${statusColor}18`, color: statusColor, border: `1px solid ${statusColor}40`,
+      <div style={{
+        minHeight: "100vh", background: BG, color: TEXT,
+        fontFamily: "'Inter', system-ui, sans-serif",
+        display: "flex", justifyContent: "center",
+        padding: `${incomplete ? 88 : 40}px 16px 60px`,
+        backgroundImage: `radial-gradient(ellipse 100% 60% at 50% -10%, rgba(99,102,241,0.12), transparent)`,
+      }}>
+        <div style={{ width: "100%", maxWidth: 700 }}>
+
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: `linear-gradient(135deg, ${ACCENT}, ${PURPLE})`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 18, boxShadow: `0 0 20px rgba(99,102,241,0.45)`,
+                flexShrink: 0,
+              }}>⚡</div>
+              <div>
+                <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1 }}>AI Monorepo</h1>
+                <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>AI Proxy Gateway</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {health === "online" && (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "5px 13px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+                  background: "rgba(34,211,165,0.08)", color: GREEN,
+                  border: "1px solid rgba(34,211,165,0.25)",
+                  boxShadow: "0 0 16px rgba(34,211,165,0.1)",
+                }}>
+                  <span style={{
+                    width: 7, height: 7, borderRadius: "50%", background: GREEN,
+                    boxShadow: `0 0 8px ${GREEN}`,
+                    animation: "pulse 2s infinite",
+                  }} /> {statusLabel}
+                </span>
+              )}
+              {health !== "online" && (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "5px 13px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+                  background: `rgba(${health === "offline" ? "248,113,113" : "100,116,139"},0.08)`,
+                  color: statusColor,
+                  border: `1px solid rgba(${health === "offline" ? "248,113,113" : "100,116,139"},0.2)`,
+                }}>
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: statusColor }} /> {statusLabel}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Tab Bar */}
+          <div style={{
+            display: "flex", gap: 2, marginBottom: 24,
+            background: "rgba(255,255,255,0.03)",
+            borderRadius: 12, padding: 4,
+            border: `1px solid ${BORDER}`,
           }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: statusColor }} /> {statusText}
-          </span>
-        </div>
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                style={{
+                  flex: 1, padding: "8px 12px", borderRadius: 9, border: "none",
+                  background: tab === t.id
+                    ? "rgba(255,255,255,0.07)"
+                    : "transparent",
+                  color: tab === t.id ? TEXT : MUTED,
+                  fontSize: 13, fontWeight: tab === t.id ? 600 : 400,
+                  cursor: "pointer", transition: "all 0.15s",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  boxShadow: tab === t.id ? "0 1px 6px rgba(0,0,0,0.3)" : "none",
+                  borderBottom: tab === t.id ? `2px solid ${ACCENT}` : "2px solid transparent",
+                }}
+              >
+                <span style={{ fontSize: 14 }}>{t.icon}</span>
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-        {/* Tab Bar */}
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: CARD2, borderRadius: 8, padding: 4, border: `1px solid ${BORDER}` }}>
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              style={{
-                flex: 1, padding: "7px 12px", borderRadius: 6, border: "none",
-                background: tab === t.id ? CARD : "transparent",
-                color: tab === t.id ? TEXT : MUTED,
-                fontSize: 13, fontWeight: tab === t.id ? 600 : 400,
-                cursor: "pointer", transition: "all 0.15s",
-                boxShadow: tab === t.id ? `0 1px 4px rgba(0,0,0,0.3)` : "none",
-              }}
-            >{t.label}</button>
-          ))}
-        </div>
-
-        {tab === "home" && <>
-          {/* Base URL */}
-          {(() => {
-            const isDev = envIsDev;
-            return (
-              <div style={{ background: CARD, borderRadius: 10, border: `1px solid ${isDev ? YELLOW : BORDER}`, padding: "16px 20px", marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: MUTED, textTransform: "uppercase" }}>Base URL</div>
+          {tab === "home" && <>
+            {/* Base URL Card */}
+            {(() => {
+              const isDev = envIsDev;
+              return (
+                <div style={{
+                  borderRadius: 14, padding: "18px 20px", marginBottom: 14,
+                  background: isDev
+                    ? "rgba(251,191,36,0.04)"
+                    : "rgba(99,102,241,0.04)",
+                  border: `1px solid ${isDev ? "rgba(251,191,36,0.2)" : BORDER_ACCENT}`,
+                  backdropFilter: "blur(8px)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em", color: MUTED, textTransform: "uppercase" }}>Base URL</div>
+                    {isDev && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                        background: "rgba(251,191,36,0.12)", color: YELLOW,
+                        border: "1px solid rgba(251,191,36,0.3)",
+                      }}>
+                        临时链接
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{
+                      fontFamily: "monospace", fontSize: 13.5,
+                      color: isDev ? YELLOW : ACCENT2,
+                      flex: 1, wordBreak: "break-all", fontWeight: 500,
+                    }}>{baseUrl}</span>
+                    <button onClick={() => {
+                      navigator.clipboard.writeText(baseUrl).then(() => {
+                        setCopied(true); setTimeout(() => setCopied(false), 2000);
+                      });
+                    }} style={{
+                      padding: "6px 14px", borderRadius: 7,
+                      border: `1px solid ${BORDER}`,
+                      background: copied ? "rgba(34,211,165,0.1)" : "rgba(255,255,255,0.05)",
+                      color: copied ? GREEN : MUTED,
+                      fontSize: 12, fontWeight: 500, cursor: "pointer", flexShrink: 0, transition: "all 0.15s",
+                    }}>{copied ? "✓ 已复制" : "复制"}</button>
+                  </div>
                   {isDev && (
-                    <span style={{ fontSize: 10.5, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: `${YELLOW}18`, color: YELLOW, border: `1px solid ${YELLOW}40`, letterSpacing: "0.04em" }}>
-                      临时链接
-                    </span>
+                    <div style={{
+                      marginTop: 12, paddingTop: 12,
+                      borderTop: "1px solid rgba(251,191,36,0.15)",
+                      fontSize: 12, color: MUTED, lineHeight: 1.65,
+                    }}>
+                      ⚠ 此链接为 <strong style={{ color: YELLOW }}>Replit 开发环境临时地址</strong>，每次重启后可能变化。
+                      如需稳定端点，请通过 Replit <strong style={{ color: TEXT }}>Publish</strong> 功能部署后使用
+                      <code style={{ marginLeft: 4, fontFamily: "monospace", color: ACCENT2, fontSize: 11 }}>*.replit.app</code> 域名。
+                    </div>
                   )}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontFamily: "monospace", fontSize: 13, color: ACCENT, flex: 1, wordBreak: "break-all" }}>{baseUrl}</span>
-                  <button onClick={() => { navigator.clipboard.writeText(baseUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); }} style={{
-                    padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`,
-                    background: copied ? `${GREEN}20` : "transparent", color: copied ? GREEN : MUTED,
-                    fontSize: 12, cursor: "pointer", flexShrink: 0, transition: "all 0.15s",
-                  }}>{copied ? "Copied!" : "Copy"}</button>
-                </div>
-                {isDev && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}`, fontSize: 12, color: MUTED, lineHeight: 1.65 }}>
-                    ⚠ 此链接为 <strong style={{ color: YELLOW }}>Replit 开发环境临时地址</strong>，每次重启后可能变化，且长期关闭后会失效。<br />
-                    如需稳定、持久的 API 端点，请通过 Replit <strong style={{ color: TEXT }}>Publish（发布）</strong> 功能部署后使用
-                    <code style={{ marginLeft: 4, fontFamily: "monospace", color: ACCENT, fontSize: 11 }}>*.replit.app</code> 域名。
-                  </div>
-                )}
+              );
+            })()}
+
+            {/* Hint */}
+            <div style={{
+              background: CARD2, borderRadius: 10,
+              border: `1px solid ${BORDER}`,
+              padding: "11px 16px", marginBottom: 24,
+            }}>
+              <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.7 }}>
+                使用此 Base URL，配合你的{" "}
+                <code style={{
+                  fontFamily: "monospace", color: TEXT,
+                  background: "rgba(255,255,255,0.07)",
+                  padding: "1px 6px", borderRadius: 4, fontSize: 11,
+                }}>PROXY_API_KEY</code>
+                {" "}即可接入任意兼容 OpenAI 格式的客户端。
               </div>
-            );
-          })()}
-
-          {/* Hint */}
-          <div style={{ background: CARD2, borderRadius: 8, border: `1px solid ${BORDER}`, padding: "12px 16px", marginBottom: 24 }}>
-            <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.7 }}>
-              使用此 Base URL，配合你的{" "}
-              <code style={{ fontFamily: "monospace", color: TEXT, background: `${BORDER}80`, padding: "1px 5px", borderRadius: 4 }}>PROXY_API_KEY</code>
-              {" "}即可接入任意兼容 OpenAI 格式的客户端。
             </div>
-          </div>
 
-          {/* Version & Update */}
-          <div style={{ marginBottom: 20 }}>
-            <UpdatePanel />
-          </div>
+            <div style={{ marginBottom: 20 }}><UpdatePanel /></div>
+            <div style={{ marginBottom: 20 }}><ModelGroupsPanel /></div>
+          </>}
 
-          {/* Model Groups */}
-          <div style={{ marginBottom: 20 }}>
-            <ModelGroupsPanel />
-          </div>
-        </>}
-
-        {(tab === "logs" || tab === "stats") && (
-          <div style={{ background: CARD2, borderRadius: 8, border: `1px solid ${BORDER}`, padding: "12px 16px", marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: MUTED, textTransform: "uppercase", marginBottom: 8 }}>
-              Proxy Key（用于访问管理接口）
+          {/* Proxy Key input for stats/logs */}
+          {(tab === "logs" || tab === "stats") && (
+            <div style={{
+              background: CARD2, borderRadius: 10,
+              border: `1px solid ${BORDER}`, padding: "14px 16px", marginBottom: 16,
+            }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em", color: MUTED, textTransform: "uppercase", marginBottom: 8 }}>
+                Proxy Key（访问管理接口）
+              </div>
+              <input
+                type="password"
+                value={proxyKey}
+                onChange={(e) => {
+                  setProxyKey(e.target.value);
+                  localStorage.setItem(LS_PROXY_KEY, e.target.value);
+                }}
+                placeholder="输入你的 PROXY_API_KEY"
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  background: "rgba(0,0,0,0.3)", border: `1px solid ${BORDER}`,
+                  borderRadius: 7, color: TEXT, fontSize: 13, padding: "8px 12px",
+                  fontFamily: "monospace", outline: "none",
+                  transition: "border-color 0.15s",
+                }}
+                onFocus={e => (e.target.style.borderColor = BORDER_ACCENT)}
+                onBlur={e => (e.target.style.borderColor = BORDER)}
+              />
             </div>
-            <input
-              type="password"
-              value={proxyKey}
-              onChange={(e) => {
-                setProxyKey(e.target.value);
-                localStorage.setItem(LS_PROXY_KEY, e.target.value);
-              }}
-              placeholder="输入你的 PROXY_API_KEY"
-              style={{
-                width: "100%", boxSizing: "border-box",
-                background: CARD, border: `1px solid ${BORDER}`, borderRadius: 6,
-                color: TEXT, fontSize: 13, padding: "8px 12px",
-                fontFamily: "monospace", outline: "none",
-              }}
-            />
-          </div>
-        )}
+          )}
 
-        {tab === "stats" && <PageStats baseUrl={API_BASE} apiKey={proxyKey} />}
-        {tab === "logs" && <PageLogs baseUrl={API_BASE} apiKey={proxyKey} />}
+          {tab === "stats" && <PageStats baseUrl={API_BASE} apiKey={proxyKey} />}
+          {tab === "logs" && <PageLogs baseUrl={API_BASE} apiKey={proxyKey} />}
+        </div>
       </div>
-    </div>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; box-shadow: 0 0 8px ${GREEN}; }
+          50% { opacity: 0.6; box-shadow: 0 0 4px ${GREEN}; }
+        }
+      `}</style>
     </>
   );
 }
@@ -918,7 +1099,6 @@ export default function App() {
     configured: false,
     integrations: { anthropic: false, openai: false, gemini: false, openrouter: false, allReady: false },
   });
-  // dismissed = user explicitly chose to skip the wizard; persisted in localStorage
   const [dismissed, setDismissed] = useState(false);
 
   const handleDismiss = () => {
@@ -939,12 +1119,10 @@ export default function App() {
         setSetupStatus(data);
         const allReady = data.configured && data.integrations.allReady;
         if (allReady) {
-          // Fully configured — clear any dismissal and go to main page
           localStorage.removeItem(LS_DISMISSED);
           setDismissed(false);
           setAppState("ready");
         } else {
-          // Not fully configured — check if user previously dismissed the wizard
           const wasDismissed = localStorage.getItem(LS_DISMISSED) === "1";
           setDismissed(wasDismissed);
           setAppState("needs-setup");
@@ -961,13 +1139,23 @@ export default function App() {
 
   if (appState === "checking") {
     return (
-      <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: MUTED, fontSize: 14 }}>正在初始化…</span>
+      <div style={{
+        minHeight: "100vh", background: BG,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexDirection: "column", gap: 12,
+        backgroundImage: `radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,102,241,0.12), transparent)`,
+      }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 10,
+          background: `linear-gradient(135deg, ${ACCENT}, ${PURPLE})`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 18, boxShadow: `0 0 20px rgba(99,102,241,0.45)`,
+        }}>⚡</div>
+        <span style={{ color: MUTED, fontSize: 13 }}>正在初始化…</span>
       </div>
     );
   }
 
-  // Show wizard only when not configured AND user has not dismissed it
   if (appState === "needs-setup" && !dismissed) {
     return (
       <SetupWizard
