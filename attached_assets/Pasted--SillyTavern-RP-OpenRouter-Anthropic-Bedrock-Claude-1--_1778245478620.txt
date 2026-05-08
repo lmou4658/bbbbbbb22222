@@ -1,0 +1,127 @@
+请修改项目，目标是适配 SillyTavern / 酒馆 RP 使用，并提升 OpenRouter + Anthropic Bedrock Claude 的缓存命中率。
+
+需要改两个文件：
+
+1. 修改 artifacts/api-server/src/lib/modelGroups.ts
+
+在 OPENROUTER_MODELS 里增加：
+
+"anthropic/claude-opus-4.6:thinking",
+"anthropic/claude-opus-4.6-fast:thinking",
+
+要求：
+- 不要删除原来的 anthropic/claude-opus-4.6
+- 不要删除原来的 anthropic/claude-opus-4.6-fast
+- 新增模型默认 enabled
+- 这样 /v1/models 可以显示给 SillyTavern
+
+2. 修改 artifacts/api-server/src/routes/v1/chat.ts
+
+请优化 OpenRouter 分支参数透传。
+
+当前 OpenRouter stream=true 只传了：
+model, messages, stream, stream_options, temperature, top_p, max_tokens, stop，以及 anthropic/ 模型的 Bedrock provider routing。
+
+请新增支持：
+
+- presence_penalty
+- frequency_penalty
+- seed，stream=true 和 stream=false 都要传
+- reasoning
+
+并支持模型名快捷写法：
+
+如果 OpenRouter 模型名以 anthropic/ 开头，并且以 :thinking 结尾，例如：
+
+anthropic/claude-opus-4.6:thinking
+
+则实际发给 OpenRouter 时：
+
+model 改成：
+anthropic/claude-opus-4.6
+
+同时增加：
+
+reasoning: { enabled: true }
+
+如果请求 body 本身已经带 reasoning，则优先使用 body.reasoning。
+
+同时继续保留原来的强制 Bedrock 路由：
+
+provider: { order: ["Bedrock"], allow_fallbacks: false }
+
+3. 优化 Anthropic / Bedrock prompt cache 断点策略
+
+当前 applyBedrockAnthropicPromptCache() 不要再只从 messages 开头开始标记前 4 个 cache_control。
+
+请改成适合长篇 SillyTavern RP 的缓存断点策略：
+
+目标：
+- 对 anthropic/ 开头的 OpenRouter Claude 模型启用 prompt cache；
+- 包括 anthropic/claude-opus-4.6 和 anthropic/claude-opus-4.6:thinking；
+- 如果模型名带 :thinking，应先 normalize 成不带 :thinking 的模型名，再判断是否启用缓存；
+- 每次请求最多添加 4 个 cache_control，因为 Anthropic / Bedrock 上限是 4 个；
+- 最后一条用户消息永远不要加 cache_control，因为它每轮都会变化；
+- 短对话不要报错，也不要产生副作用。
+
+长对话策略：
+如果 messages.length > 20，请最多选择 4 个 cache_control 断点，分布在：
+
+1. system 消息，如果存在；
+2. 历史消息约 1/3 位置；
+3. 历史消息约 2/3 位置；
+4. 靠近末尾、但不是最后一条用户消息的稳定历史消息。
+
+短对话策略：
+如果 messages.length <= 20：
+- 优先 system 消息；
+- 然后从靠近末尾的稳定历史消息开始补足；
+- 最多仍然 4 个；
+- 不要给最后一条用户消息加 cache_control。
+
+cache_control 添加方式：
+- 如果 message.content 是 string，则转换成：
+  [{ type: "text", text: content, cache_control: { type: "ephemeral" } }]
+- 如果 message.content 是数组，则给最后一个 type === "text" 的 block 增加：
+  cache_control: { type: "ephemeral" }
+- 如果没有 text block、content 为空、或者是最后一条消息，则不要加 cache_control。
+
+建议新增 helper function：
+
+function pickCacheBreakpointIndexes(messages: OAIMessage[], maxBreakpoints: number): number[]
+
+逻辑建议：
+- finalIndex = messages.length - 1
+- candidates = 所有 index < finalIndex 且 content 可缓存的消息
+- systemIndex = candidates 里第一个 role === "system" 的消息
+- historyCandidates = candidates 排除 system
+- 如果 system 存在，先加入 systemIndex
+- 如果 messages.length > 20：
+    加入 historyCandidates[Math.floor(historyCandidates.length * 1 / 3)]
+    加入 historyCandidates[Math.floor(historyCandidates.length * 2 / 3)]
+    加入 historyCandidates[historyCandidates.length - 1]
+    如不足 4，再补 historyCandidates[Math.floor(historyCandidates.length * 0.85)]
+- 如果 messages.length <= 20：
+    从 historyCandidates 靠近末尾开始补足剩余名额
+- 去重，过滤无效 index
+- 最终数量不能超过 4
+
+4. 要求 stream=true 和 stream=false 都使用同一套 OpenRouter 参数透传和缓存注入逻辑。
+
+5. 不要影响 OpenAI、Claude 直连、Gemini 分支。
+
+6. 不要影响 deepseek、qwen、google、x-ai 等非 anthropic/ OpenRouter 模型。
+
+7. 如果参数是 undefined，不要传。
+
+8. 修改后请测试：
+- /v1/models 能看到 anthropic/claude-opus-4.6:thinking；
+- stream=false 正常返回；
+- stream=true 正常 SSE 流式返回；
+- presence_penalty 和 frequency_penalty 能出现在实际发给 OpenRouter 的请求体里；
+- seed 在 stream=true 和 stream=false 都能传；
+- anthropic/claude-opus-4.6:thinking 会被转换成 anthropic/claude-opus-4.6 + reasoning: { enabled: true }；
+- anthropic/ 模型仍然带 provider: { order: ["Bedrock"], allow_fallbacks: false }；
+- 长对话最多只有 4 个 cache_control；
+- cache_control 分布在 system、约 1/3、约 2/3、靠近末尾稳定历史消息；
+- 最后一条用户消息没有 cache_control。

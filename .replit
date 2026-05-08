@@ -8,7 +8,7 @@ id = "artifacts/mockup-sandbox"
 
 [deployment]
 router = "application"
-deploymentTarget = "gce"
+deploymentTarget = "cloudrun"
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
@@ -28,5 +28,5 @@ timeoutMs = 20000
 [userenv]
 
 [userenv.shared]
-PROXY_API_KEY = "ab2080901"
+PROXY_API_KEY = "12345678"
 
