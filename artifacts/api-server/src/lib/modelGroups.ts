@@ -49,7 +49,9 @@ const OPENROUTER_MODELS = [
   "meta-llama/llama-4-maverick", "meta-llama/llama-4-scout",
   "deepseek/deepseek-v3.2", "deepseek/deepseek-r1", "deepseek/deepseek-r1-0528",
   "mistralai/mistral-small-2603", "qwen/qwen3.5-122b-a10b",
-  "google/gemini-2.5-pro", "anthropic/claude-opus-4.6", "anthropic/claude-opus-4.6-fast",
+  "google/gemini-2.5-pro",
+  "anthropic/claude-opus-4.6", "anthropic/claude-opus-4.6:thinking",
+  "anthropic/claude-opus-4.6-fast", "anthropic/claude-opus-4.6-fast:thinking",
 ];
 
 export const DEFAULT_GROUPS: ModelGroup[] = [

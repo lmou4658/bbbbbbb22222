@@ -208,6 +208,8 @@ interface ChatBody {
   parallel_tool_calls?: boolean;
   // response_format
   response_format?: { type: string };
+  // OpenRouter reasoning passthrough
+  reasoning?: unknown;
   // image generation extensions (Gemini image models)
   aspect_ratio?: string;  // e.g. "16:9", "9:16", "4:3", "3:4", "1:1"
   aspectRatio?: string;
@@ -221,10 +223,39 @@ interface ChatBody {
   input_media_resolution?: string;
 }
 
-const BEDROCK_PROMPT_CACHE_MODELS = new Set(["anthropic/claude-opus-4.6"]);
+// ----------------------------------------------------------------------
+// OpenRouter Anthropic model name helpers
+// ----------------------------------------------------------------------
+//
+// SillyTavern-style shortcut: "anthropic/claude-opus-4.6:thinking" is sent
+// to OpenRouter as model "anthropic/claude-opus-4.6" + reasoning:{enabled:true}.
+function normalizeOpenRouterAnthropicModel(model: string): {
+  model: string;
+  thinking: boolean;
+} {
+  if (model.startsWith("anthropic/") && model.endsWith(":thinking")) {
+    return { model: model.slice(0, -":thinking".length), thinking: true };
+  }
+  return { model, thinking: false };
+}
 
+// Use Anthropic prompt cache for any anthropic/* OpenRouter model
+// (after stripping the :thinking suffix).
 function shouldUseBedrockPromptCache(model: string): boolean {
-  return BEDROCK_PROMPT_CACHE_MODELS.has(model);
+  const normalized = normalizeOpenRouterAnthropicModel(model).model;
+  return normalized.startsWith("anthropic/");
+}
+
+function isCacheableContent(content: string | OAIContentPart[] | null): boolean {
+  if (content === null || content === undefined) return false;
+  if (typeof content === "string") return content.length > 0;
+  if (!Array.isArray(content) || content.length === 0) return false;
+  return content.some(
+    (p) =>
+      (p as { type?: string }).type === "text" &&
+      typeof (p as { text?: string }).text === "string" &&
+      ((p as { text: string }).text.length > 0)
+  );
 }
 
 function addCacheControlToContent(
@@ -237,32 +268,85 @@ function addCacheControlToContent(
   }
   if (!Array.isArray(content) || content.length === 0) return content;
 
-  const blocks = [...content] as Array<OAIContentPart & { cache_control?: { type: "ephemeral" } }>;
   let targetIndex = -1;
-  for (let i = blocks.length - 1; i >= 0; i--) {
-    if (blocks[i]?.type === "text") {
+  for (let i = content.length - 1; i >= 0; i--) {
+    if ((content[i] as { type?: string })?.type === "text") {
       targetIndex = i;
       break;
     }
   }
-  if (targetIndex === -1) targetIndex = blocks.length - 1;
+  // No text block — don't tag (avoid spurious cache_control on images/tool_use)
+  if (targetIndex === -1) return content;
+
+  const blocks = [...content] as Array<OAIContentPart & { cache_control?: { type: "ephemeral" } }>;
   blocks[targetIndex] = { ...blocks[targetIndex], cache_control: { type: "ephemeral" } };
   return blocks;
 }
 
+/**
+ * Choose at most `maxBreakpoints` message indexes to mark with cache_control.
+ *
+ * Rules:
+ *   - The final message (the fresh user turn) is never selected.
+ *   - System message (if any) is always preferred.
+ *   - For long convos (>20), distribute across ~1/3, ~2/3, end of history.
+ *   - For short convos (<=20), fill from the tail of history.
+ */
+function pickCacheBreakpointIndexes(
+  messages: OAIMessage[],
+  maxBreakpoints: number,
+): number[] {
+  if (maxBreakpoints <= 0 || messages.length < 2) return [];
+  const finalIndex = messages.length - 1;
+
+  const candidates: number[] = [];
+  for (let i = 0; i < finalIndex; i++) {
+    if (isCacheableContent(messages[i]!.content)) candidates.push(i);
+  }
+  if (candidates.length === 0) return [];
+
+  const systemIndex = candidates.find((i) => messages[i]!.role === "system");
+  const historyCandidates = candidates.filter((i) => messages[i]!.role !== "system");
+
+  const picked = new Set<number>();
+  if (systemIndex !== undefined) picked.add(systemIndex);
+
+  const tryAdd = (idx: number | undefined) => {
+    if (idx === undefined) return;
+    if (picked.size >= maxBreakpoints) return;
+    if (idx < 0 || idx >= finalIndex) return;
+    picked.add(idx);
+  };
+
+  if (messages.length > 20) {
+    if (historyCandidates.length > 0) {
+      tryAdd(historyCandidates[Math.floor(historyCandidates.length * (1 / 3))]);
+      tryAdd(historyCandidates[Math.floor(historyCandidates.length * (2 / 3))]);
+      tryAdd(historyCandidates[historyCandidates.length - 1]);
+      tryAdd(historyCandidates[Math.floor(historyCandidates.length * 0.85)]);
+    }
+  } else {
+    for (let i = historyCandidates.length - 1; i >= 0 && picked.size < maxBreakpoints; i--) {
+      tryAdd(historyCandidates[i]);
+    }
+  }
+
+  return Array.from(picked)
+    .filter((i) => i >= 0 && i < finalIndex)
+    .slice(0, maxBreakpoints);
+}
+
 function applyBedrockAnthropicPromptCache(body: ChatBody): ChatBody {
   if (!shouldUseBedrockPromptCache(body.model)) return body;
+  if (!Array.isArray(body.messages) || body.messages.length === 0) return body;
 
-  let remaining = 4;
-  const messages = body.messages.map((msg, index) => {
-    const isFinalMessage = index === body.messages.length - 1;
-    const shouldMarkSystem = msg.role === "system";
-    const shouldMarkContext = !isFinalMessage && msg.role !== "system";
-    if (remaining <= 0 || (!shouldMarkSystem && !shouldMarkContext)) return msg;
+  const indexes = new Set(pickCacheBreakpointIndexes(body.messages, 4));
+  if (indexes.size === 0) return body;
 
+  const messages = body.messages.map((msg, i) => {
+    if (!indexes.has(i)) return msg;
     const content = addCacheControlToContent(msg.content);
     if (content === msg.content) return msg;
-    remaining--;
     return { ...msg, content };
   });
 
@@ -1191,6 +1275,42 @@ async function handleGeminiNonStream(
 // OpenRouter - streaming (OpenAI-compatible, uses openrouter client)
 // ----------------------------------------------------------------------
 
+function buildOpenRouterParams(
+  body: ChatBody,
+  resolvedMessages: OAIMessage[],
+  stream: boolean,
+): Record<string, unknown> {
+  // Strip the SillyTavern-style ":thinking" suffix from anthropic/* models
+  // and translate it into reasoning:{enabled:true} for OpenRouter.
+  const { model: outboundModel, thinking } = normalizeOpenRouterAnthropicModel(body.model);
+
+  const params: Record<string, unknown> = {
+    model: outboundModel,
+    messages: resolvedMessages,
+    stream,
+  };
+  if (stream) params["stream_options"] = { include_usage: true };
+
+  if (body.temperature !== undefined) params["temperature"] = body.temperature;
+  if (body.top_p !== undefined) params["top_p"] = body.top_p;
+  if (body.max_tokens !== undefined) params["max_tokens"] = body.max_tokens;
+  if (body.stop !== undefined) params["stop"] = body.stop;
+  if (body.seed !== undefined) params["seed"] = body.seed;
+  if (body.presence_penalty !== undefined) params["presence_penalty"] = body.presence_penalty;
+  if (body.frequency_penalty !== undefined) params["frequency_penalty"] = body.frequency_penalty;
+
+  // Reasoning: client-supplied wins; otherwise enable when ":thinking" suffix was used.
+  if (body.reasoning !== undefined) params["reasoning"] = body.reasoning;
+  else if (thinking) params["reasoning"] = { enabled: true };
+
+  // Force AWS Bedrock for any anthropic/* model (uses Anthropic prompt cache).
+  if (outboundModel.startsWith("anthropic/")) {
+    params["provider"] = { order: ["Bedrock"], allow_fallbacks: false };
+  }
+
+  return params;
+}
+
 async function handleOpenRouterStream(
   _req: Request,
   res: Response,
@@ -1199,23 +1319,7 @@ async function handleOpenRouterStream(
 ) {
   const cacheAwareBody = applyBedrockAnthropicPromptCache(body);
   const resolvedMessages = await resolveImageUrls(cacheAwareBody.messages);
-
-  const params: OpenAI.Chat.ChatCompletionCreateParamsStreaming = {
-    model: cacheAwareBody.model,
-    messages: resolvedMessages as OpenAI.ChatCompletionMessageParam[],
-    stream: true,
-    stream_options: { include_usage: true },
-  };
-
-  if (body.temperature !== undefined) params.temperature = body.temperature;
-  if (body.top_p !== undefined) params.top_p = body.top_p;
-  if (body.max_tokens !== undefined) params.max_tokens = body.max_tokens;
-  if (body.stop !== undefined) params.stop = body.stop as string | string[];
-
-  // Route all anthropic/ models through AWS Bedrock via OpenRouter Provider Routing
-  const bedrockParams = cacheAwareBody.model.startsWith("anthropic/")
-    ? { ...params, provider: { order: ["Bedrock"], allow_fallbacks: false } }
-    : params;
+  const bedrockParams = buildOpenRouterParams(cacheAwareBody, resolvedMessages, true);
 
   setSseHeaders(res);
   res.write(": init\n\n");
@@ -1226,7 +1330,7 @@ async function handleOpenRouterStream(
 
   try {
     const stream = await openrouter.chat.completions.create(
-      bedrockParams as OpenAI.Chat.ChatCompletionCreateParamsStreaming
+      bedrockParams as unknown as OpenAI.Chat.ChatCompletionCreateParamsStreaming
     );
     for await (const chunk of stream) {
       if (chunk.usage) {
@@ -1264,26 +1368,10 @@ async function handleOpenRouterNonStream(
 ): Promise<Record<string, unknown>> {
   const cacheAwareBody = applyBedrockAnthropicPromptCache(body);
   const resolvedMessages = await resolveImageUrls(cacheAwareBody.messages);
-
-  const params: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming = {
-    model: cacheAwareBody.model,
-    messages: resolvedMessages as OpenAI.ChatCompletionMessageParam[],
-    stream: false,
-  };
-
-  if (body.temperature !== undefined) params.temperature = body.temperature;
-  if (body.top_p !== undefined) params.top_p = body.top_p;
-  if (body.max_tokens !== undefined) params.max_tokens = body.max_tokens;
-  if (body.stop !== undefined) params.stop = body.stop as string | string[];
-  if (body.seed !== undefined) params.seed = body.seed;
-
-  // Route all anthropic/ models through AWS Bedrock via OpenRouter Provider Routing
-  const bedrockParams = cacheAwareBody.model.startsWith("anthropic/")
-    ? { ...params, provider: { order: ["Bedrock"], allow_fallbacks: false } }
-    : params;
+  const bedrockParams = buildOpenRouterParams(cacheAwareBody, resolvedMessages, false);
 
   const response = await openrouter.chat.completions.create(
-    bedrockParams as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming
+    bedrockParams as unknown as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming
   );
   stats.promptTokens = response.usage?.prompt_tokens ?? 0;
   stats.completionTokens = response.usage?.completion_tokens ?? 0;
