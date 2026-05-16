@@ -6,3 +6,9 @@ id = "0NP29JL-i4gXmMha8KBGt"
 uri = "file://ai-monorepo-source.tar.gz"
 type = "unspecified"
 title = "AI Monorepo 源码 (tar.gz)"
+
+[[outputs]]
+id = "Z03aEafXqkA824v_9eZGm"
+uri = "file://ai-monorepo-stats-client.zip"
+type = "unspecified"
+title = "ai-monorepo-stats-client.zip"
