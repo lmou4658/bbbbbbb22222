@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { authMiddleware } from "../middlewares/auth";
 import { requestLogs, logSSEClients, getModelStats, resetStats } from "../lib/requestLog";
+import { calcCost } from "../lib/modelPricing";
 import {
   getCacheStats,
   cacheClear,
@@ -35,6 +36,60 @@ router.get("/stats", authMiddleware, (_req: Request, res: Response) => {
     modelStats: getModelStats(),
     cacheStats: getCacheStats(),
     uptimeSeconds: Math.round(process.uptime()),
+  });
+});
+
+/**
+ * GET /api/v1/stats/summary
+ *
+ * Returns aggregated totals ready for display or polling:
+ *   totalRequests     – total number of AI calls recorded
+ *   totalInputTokens  – sum of all prompt tokens
+ *   totalOutputTokens – sum of all completion tokens
+ *   estimatedCostUsd  – server-side cost calculation (same formula as the portal)
+ *   uptimeSeconds     – seconds since process start
+ *   perModel          – per-model breakdown with individual cost
+ *
+ * Authentication: same PROXY_API_KEY bearer token as all other endpoints.
+ */
+router.get("/stats/summary", authMiddleware, (_req: Request, res: Response) => {
+  const modelStats = getModelStats();
+
+  let totalRequests = 0;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let estimatedCostUsd = 0;
+
+  const perModel: Record<string, {
+    calls: number;
+    inputTokens: number;
+    outputTokens: number;
+    costUsd: number | null;
+  }> = {};
+
+  for (const [model, stat] of Object.entries(modelStats)) {
+    totalRequests += stat.calls;
+    totalInputTokens += stat.promptTokens;
+    totalOutputTokens += stat.completionTokens;
+
+    const cost = calcCost(model, stat.promptTokens, stat.completionTokens);
+    if (cost !== null) estimatedCostUsd += cost;
+
+    perModel[model] = {
+      calls: stat.calls,
+      inputTokens: stat.promptTokens,
+      outputTokens: stat.completionTokens,
+      costUsd: cost,
+    };
+  }
+
+  res.json({
+    totalRequests,
+    totalInputTokens,
+    totalOutputTokens,
+    estimatedCostUsd,
+    uptimeSeconds: Math.round(process.uptime()),
+    perModel,
   });
 });
 
