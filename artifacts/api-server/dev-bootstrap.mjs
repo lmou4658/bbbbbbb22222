@@ -90,7 +90,7 @@ function launchRealServer() {
     ["--enable-source-maps", join(__dirname, "dist/index.mjs")],
     {
       stdio: "inherit",
-      env: process.env,
+      env: { ...process.env, PORT: String(PORT) },
       cwd: __dirname,
     }
   );
