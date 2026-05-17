@@ -29,3 +29,5 @@ timeoutMs = 20000
 [userenv.shared]
 PROXY_API_KEY = "12345678"
 
+[nix]
+
