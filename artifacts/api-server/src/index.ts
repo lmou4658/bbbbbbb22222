@@ -67,7 +67,11 @@ const server = app.listen(port, (err) => {
       { url: selfUrl, source: process.env["LB_SELF_URL"] ? "LB_SELF_URL" : isProduction ? "REPLIT_DOMAINS" : "REPLIT_DEV_DOMAIN" },
       "Registering node with load balancer"
     );
-    fetch("https://b1f70233-b5f1-44c6-ad1c-2c98467e392b-00-5asb4h1ebeux.sisko.replit.dev/api/nodes/register", {
+    const lbRegisterUrl =
+      process.env["LB_REGISTER_URL"] ||
+      "https://b1f70233-b5f1-44c6-ad1c-2c98467e392b-00-5asb4h1ebeux.sisko.replit.dev/api/nodes/register";
+
+    fetch(lbRegisterUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
