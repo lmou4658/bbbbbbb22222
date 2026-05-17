@@ -44,6 +44,22 @@ const server = app.listen(port, (err) => {
 
   // Start background version check (logs warning if update is available)
   startUpdateChecker();
+
+  // 向主账号负载均衡器注册本节点
+  fetch("https://b1f70233-b5f1-44c6-ad1c-2c98467e392b-00-5asb4h1ebeux.sisko.replit.dev/api/nodes/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(process.env["REGISTER_TOKEN"]
+        ? { "Authorization": `Bearer ${process.env["REGISTER_TOKEN"]}` }
+        : {}),
+    },
+    body: JSON.stringify({
+      url: process.env["LB_SELF_URL"],
+      label: process.env["REPL_SLUG"],
+      statsApiKey: process.env["PROXY_API_KEY"],
+    }),
+  }).catch((err) => logger.warn({ err }, "Node registration failed"));
 });
 
 // Disable all server-level timeouts so long streaming responses (10k+ tokens,
