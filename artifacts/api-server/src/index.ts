@@ -46,20 +46,33 @@ const server = app.listen(port, (err) => {
   startUpdateChecker();
 
   // 向主账号负载均衡器注册本节点
-  fetch("https://b1f70233-b5f1-44c6-ad1c-2c98467e392b-00-5asb4h1ebeux.sisko.replit.dev/api/nodes/register", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(process.env["REGISTER_TOKEN"]
-        ? { "Authorization": `Bearer ${process.env["REGISTER_TOKEN"]}` }
-        : {}),
-    },
-    body: JSON.stringify({
-      url: process.env["LB_SELF_URL"],
-      label: process.env["REPL_SLUG"],
-      statsApiKey: process.env["PROXY_API_KEY"],
-    }),
-  }).catch((err) => logger.warn({ err }, "Node registration failed"));
+  // LB_SELF_URL 优先；若未设置则从 REPLIT_DEV_DOMAIN 自动推断
+  const selfUrl =
+    process.env["LB_SELF_URL"] ||
+    (process.env["REPLIT_DEV_DOMAIN"]
+      ? `https://${process.env["REPLIT_DEV_DOMAIN"]}`
+      : undefined);
+
+  if (!selfUrl) {
+    logger.warn("Node registration skipped: LB_SELF_URL and REPLIT_DEV_DOMAIN are both unset");
+  } else {
+    fetch("https://b1f70233-b5f1-44c6-ad1c-2c98467e392b-00-5asb4h1ebeux.sisko.replit.dev/api/nodes/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env["REGISTER_TOKEN"]
+          ? { "Authorization": `Bearer ${process.env["REGISTER_TOKEN"]}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        url: selfUrl,
+        label: process.env["REPL_SLUG"],
+        statsApiKey: process.env["PROXY_API_KEY"],
+      }),
+    })
+      .then((r) => logger.info({ status: r.status, url: selfUrl }, "Node registered with load balancer"))
+      .catch((err) => logger.warn({ err }, "Node registration failed"));
+  }
 });
 
 // Disable all server-level timeouts so long streaming responses (10k+ tokens,
