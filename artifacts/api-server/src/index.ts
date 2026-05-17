@@ -46,20 +46,27 @@ const server = app.listen(port, (err) => {
   startUpdateChecker();
 
   // 向主账号负载均衡器注册本节点
-  // LB_SELF_URL 优先；若未设置则从 REPLIT_DEV_DOMAIN 自动推断
+  // 优先级：LB_SELF_URL（手动覆盖）> REPLIT_DOMAINS（部署后正式域名）> REPLIT_DEV_DOMAIN（开发临时域名）
+  const productionDomain = process.env["REPLIT_DOMAINS"]?.split(",")[0]?.trim();
   const selfBase =
     process.env["LB_SELF_URL"] ||
-    (process.env["REPLIT_DEV_DOMAIN"]
-      ? `https://${process.env["REPLIT_DEV_DOMAIN"]}`
-      : undefined);
+    (productionDomain ? `https://${productionDomain}` : undefined) ||
+    (process.env["REPLIT_DEV_DOMAIN"] ? `https://${process.env["REPLIT_DEV_DOMAIN"]}` : undefined);
+
   // 确保以 /api 结尾，轮询项目通过此前缀调用所有接口
   const selfUrl = selfBase
     ? selfBase.replace(/\/api\/?$/, "") + "/api"
     : undefined;
 
+  const isProduction = Boolean(productionDomain) && !process.env["LB_SELF_URL"];
+
   if (!selfUrl) {
-    logger.warn("Node registration skipped: LB_SELF_URL and REPLIT_DEV_DOMAIN are both unset");
+    logger.warn("Node registration skipped: no URL available (set LB_SELF_URL or deploy to get REPLIT_DOMAINS)");
   } else {
+    logger.info(
+      { url: selfUrl, source: process.env["LB_SELF_URL"] ? "LB_SELF_URL" : isProduction ? "REPLIT_DOMAINS" : "REPLIT_DEV_DOMAIN" },
+      "Registering node with load balancer"
+    );
     fetch("https://b1f70233-b5f1-44c6-ad1c-2c98467e392b-00-5asb4h1ebeux.sisko.replit.dev/api/nodes/register", {
       method: "POST",
       headers: {
@@ -74,7 +81,7 @@ const server = app.listen(port, (err) => {
         statsApiKey: process.env["PROXY_API_KEY"],
       }),
     })
-      .then((r) => logger.info({ status: r.status, url: selfUrl }, "Node registered with load balancer"))
+      .then((r) => logger.info({ status: r.status, url: selfUrl, isProduction }, "Node registered with load balancer"))
       .catch((err) => logger.warn({ err }, "Node registration failed"));
   }
 });
