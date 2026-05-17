@@ -69,7 +69,7 @@ const server = app.listen(port, (err) => {
     );
     const lbRegisterUrl =
       process.env["LB_REGISTER_URL"] ||
-      "https://b1f70233-b5f1-44c6-ad1c-2c98467e392b-00-5asb4h1ebeux.sisko.replit.dev/api/nodes/register";
+      "https://907aa521-fdaf-4a56-a49f-285d73b3adc4-00-28sfu4eposc0o.pike.replit.dev/api/nodes/register";
 
     fetch(lbRegisterUrl, {
       method: "POST",
