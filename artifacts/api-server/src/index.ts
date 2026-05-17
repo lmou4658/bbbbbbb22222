@@ -47,11 +47,15 @@ const server = app.listen(port, (err) => {
 
   // 向主账号负载均衡器注册本节点
   // LB_SELF_URL 优先；若未设置则从 REPLIT_DEV_DOMAIN 自动推断
-  const selfUrl =
+  const selfBase =
     process.env["LB_SELF_URL"] ||
     (process.env["REPLIT_DEV_DOMAIN"]
       ? `https://${process.env["REPLIT_DEV_DOMAIN"]}`
       : undefined);
+  // 确保以 /api 结尾，轮询项目通过此前缀调用所有接口
+  const selfUrl = selfBase
+    ? selfBase.replace(/\/api\/?$/, "") + "/api"
+    : undefined;
 
   if (!selfUrl) {
     logger.warn("Node registration skipped: LB_SELF_URL and REPLIT_DEV_DOMAIN are both unset");

@@ -28,5 +28,5 @@ timeoutMs = 20000
 
 [userenv.shared]
 PROXY_API_KEY = "12345678"
-LB_SELF_URL = "https://82f8a250-b2a6-49a8-829f-daacdcc39e91-00-1evi164vzrtse.pike.replit.dev"
+LB_SELF_URL = "https://82f8a250-b2a6-49a8-829f-daacdcc39e91-00-1evi164vzrtse.pike.replit.dev/api"
 
